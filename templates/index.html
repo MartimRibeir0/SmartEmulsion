@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emulsão Smart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div class="flex min-h-screen items-center justify-center bg-gray-500 p-4">
+      <!-- Contentor Principal 1280x720 -->
+      <div class="relative h-[720px] w-[1280px] overflow-hidden bg-[#cfccc4] font-sans shadow-2xl select-none border-4 border-white/20">
+        
+        <!-- SISTEMA DE NAVEGAÇÃO (CSS PURE) -->
+        <input type="radio" name="n" id="t-intro" class="hidden" checked />
+        <input type="radio" name="n" id="t-criar" class="hidden" />
+        <input type="radio" name="n" id="t-home" class="hidden" />
+        <input type="radio" name="n" id="t-repor" class="hidden" />
+        <input type="radio" name="n" id="t-menu" class="hidden" />
+        <input type="radio" name="n" id="t-tanque" class="hidden" />
+        <input type="radio" name="n" id="t-st-ph" class="hidden" />
+        <input type="radio" name="n" id="t-st-oil" class="hidden" />
+        <input type="radio" name="n" id="t-st-lvl" class="hidden" />
+        <input type="radio" name="n" id="t-conf" class="hidden" />
+        <input type="radio" name="n" id="t-hist" class="hidden" />
+        <input type="radio" name="n" id="t-pred" class="hidden" />
+        <input type="radio" name="n" id="t-tuto" class="hidden" />
+
+        <style>
+          /* Lógica de Troca de Ecrãs */
+          .v { display: none; height: 100%; width: 100%; flex-direction: column; }
+          #t-intro:checked ~ #v-intro, #t-criar:checked ~ #v-criar, #t-home:checked ~ #v-home, #t-repor:checked ~ #v-repor, #t-menu:checked ~ #v-menu, #t-tanque:checked ~ #v-tanque, #t-st-ph:checked ~ #v-st-ph,
+          #t-st-oil:checked ~ #v-st-oil, #t-st-lvl:checked ~ #v-st-lvl, #t-conf:checked ~ #v-conf, #t-hist:checked ~ #v-hist,
+          #t-pred:checked ~ #v-pred, #t-tuto:checked ~ #v-tuto { display: flex; }
+
+          /* Estilo dos Gráficos para evitar distorção (Círculos Perfeitos) */
+          .chart-box { width: 960px; height: 380px; margin: 0 auto; background: white; border-radius: 24px; padding: 40px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+
+          /* Estilo dos Sliders */
+          input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+          input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 16px; cursor: pointer; background: #e5e7eb; border-radius: 10px; border: 1px solid #d1d5db; }
+          input[type=range]::-webkit-slider-thumb { height: 32px; width: 32px; border-radius: 50%; background: #60a5fa; cursor: pointer; -webkit-appearance: none; margin-top: -9px; border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+          input[type=range]:active::-webkit-slider-thumb { background: #3b82f6; transform: scale(1.1); }
+
+          /* Ocultar as setas de incremento do input number */
+          input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        </style>
+
+        <!-- ========================================== 
+             ECRÃ: INTRO (Seleção / Criação de Tanque)
+        ========================================== -->
+        <div id="v-intro" class="v">
+          <div class="flex-1 flex flex-col items-center justify-center gap-12 bg-white/50 backdrop-blur-sm">
+            <div class="text-center space-y-4">
+              <h1 class="text-6xl font-black text-gray-800 tracking-tighter">Emulsão Smart</h1>
+              <p class="text-2xl font-bold text-gray-500 italic">Selecione ou crie um tanque para iniciar</p>
+            </div>
+            
+            <!-- Contentor de Tanques Dinâmico -->
+            <div id="tank-list" class="flex flex-wrap justify-center gap-10 mt-8 px-10 max-h-[400px] overflow-y-auto py-4">
+              <!-- Os tanques serão inseridos aqui pelo JS -->
+            </div>
+
+            <!-- Botão para Criar Novo (fora da lista para estar sempre visível se necessário, ou no fim) -->
+            <label for="t-criar" class="flex flex-col items-center justify-center h-24 w-64 rounded-2xl bg-gray-800 text-white cursor-pointer shadow-xl hover:bg-black transition active:scale-95 font-black text-xl">
+              + Novo Tanque
+            </label>
+          </div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: CRIAR/EDITAR TANQUE
+        ========================================== -->
+        <div id="v-criar" class="v">
+          <div class="flex-1 flex flex-col items-center justify-center gap-8 bg-white/50 backdrop-blur-sm">
+            <div class="text-center space-y-2">
+              <h1 id="tank-modal-title" class="text-5xl font-black text-gray-800 tracking-tighter">Novo Tanque</h1>
+              <p class="text-xl font-bold text-gray-500 italic">Defina as especificações do sistema</p>
+            </div>
+            
+            <div class="w-[500px] bg-white rounded-[40px] p-10 shadow-2xl border-b-8 border-blue-100 space-y-6">
+              <input type="hidden" id="input-tank-id">
+              <div class="space-y-2">
+                <label class="text-lg font-black text-gray-400 italic">Nome do Tanque</label>
+                <input type="text" id="input-tank-name" placeholder="Ex: Tanque Secundário" class="w-full rounded-2xl border-4 border-gray-100 bg-gray-50 p-4 text-black font-bold text-xl outline-none focus:border-blue-300 transition-colors">
+              </div>
+              <div class="space-y-2">
+                <label class="text-lg font-black text-gray-400 italic">Capacidade (Litros)</label>
+                <input type="number" id="input-tank-cap" placeholder="Ex: 1000" class="w-full rounded-2xl border-4 border-gray-100 bg-gray-50 p-4 text-black font-bold text-xl outline-none focus:border-blue-300 transition-colors">
+              </div>
+              
+              <div class="flex flex-col gap-4 pt-4">
+                <div class="flex gap-4">
+                  <label for="t-intro" class="flex-1 flex cursor-pointer items-center justify-center rounded-2xl bg-rose-100 border-4 border-rose-200 py-4 text-xl font-black text-rose-900 shadow-md hover:bg-rose-200 active:scale-95 transition">Cancelar</label>
+                  <button onclick="salvarTanque()" id="btn-save-tank" class="flex-1 rounded-2xl bg-[#a8e6b3] border-4 border-[#86d895] py-4 text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] active:scale-95 transition">Adicionar</button>
+                </div>
+                <button onclick="removeTankFromEdit()" id="btn-delete-tank" class="hidden w-full rounded-2xl bg-rose-500 border-4 border-rose-600 py-4 text-xl font-black text-white shadow-md hover:bg-rose-600 active:scale-95 transition">Eliminar Tanque</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: HOME (Menu Inicial)
+        ========================================== -->
+        <div id="v-home" class="v">
+          <div class="flex h-[120px] items-center justify-between px-10 pt-4">
+            <label for="t-menu" class="flex h-16 w-16 cursor-pointer items-center justify-center rounded-xl bg-gray-800 shadow-md hover:bg-black transition active:scale-95">
+              <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-width="2" stroke-linecap="round"/></svg>
+            </label>
+            <div class="rounded-xl border-2 border-green-900 bg-orange-200 px-6 py-2 text-right text-black shadow-lg">
+              <p id="home-tank-title" class="text-xl font-black tracking-tighter">Tanque Principal</p>
+              <p class="text-xs font-bold opacity-90">Sensores Funcionais</p>
+            </div>
+          </div>
+          <div class="flex flex-1 items-center justify-center gap-10 px-10">
+            <div class="flex h-[320px] w-[280px] flex-col items-center justify-between rounded-3xl bg-white py-8 shadow-xl border-4 border-blue-400 ">
+              <h2 class="text-xl font-black text-gray-400">pH</h2><div class="text-6xl">🧪</div><p id="ui-ph" class="text-6xl font-black text-gray-900">6.49</p>
+            </div>
+            <div class="flex h-[320px] w-[280px] flex-col items-center justify-between rounded-3xl bg-white py-8 shadow-xl border-4 border-blue-400 ">
+              <h2 class="text-xl font-black text-gray-400 leading-tight text-center">Concentração <br> de óleo (%)</h2><div class="text-6xl">💧</div><p id="ui-oil" class="text-6xl font-black text-gray-900">5.4%</p>
+            </div>
+            <div class="flex h-[320px] w-[280px] flex-col items-center justify-between rounded-3xl bg-white py-8 shadow-xl border-4 border-blue-400 ">
+              <h2 class="text-xl font-black text-blue-300">Nível do Tanque</h2>
+              <div class="text-6xl">📊</div>
+              <div class="text-center">
+                <p id="ui-level-percent" class="text-6xl font-black text-blue-500">27%</p>
+                <p class="text-lg font-bold text-blue-400 mt-1"><span id="home-vol-atual">135</span> L / <span id="home-vol-total">500</span> L</p>
+              </div>
+            </div>
+          </div>
+          <div class="flex h-[140px] items-start justify-center gap-10">
+            <label for="t-tanque" class="flex h-20 w-[440px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-2xl font-black text-green-950 shadow-lg active:scale-95 transition">Visualizar Tanque</label>
+            <label for="t-repor" class="flex h-20 w-[440px] cursor-pointer items-center justify-center rounded-2xl bg-blue-400 text-2xl font-black text-white shadow-lg active:scale-95 transition">Repor Líquido no Tanque</label>
+          </div>
+          </div>
+
+          <!-- ========================================== 
+             ECRÃ: REPOSIÇÃO (DINÂMICO)
+          ========================================== -->
+          <div id="v-repor" class="v">
+          <div class="h-[80px] flex items-center justify-center text-4xl font-black pt-6 tracking-widest text-gray-900 italic">Encher Tanque</div>
+
+          <div class="flex flex-1 items-center justify-center gap-8 px-10">
+            <!-- Controles -->
+            <div class="w-1/2 bg-white rounded-[40px] p-10 shadow-2xl border-b-8 border-blue-100 space-y-10">
+              <div class="space-y-4">
+                <div class="flex justify-between items-end">
+                  <label class="text-lg font-black text-gray-400 italic">Concentração Alvo <span id="ui-label-oil-liters" class="text-sm text-blue-400">(0.0L óleo)</span></label>
+                  <span class="text-4xl font-black text-blue-500"><span id="val-oil-txt">6.0</span>%</span>
+                </div>
+                <input type="range" id="range-oil" min="0" max="10" step="0.1" value="6.0" class="w-full">
+              </div>
+              <div class="space-y-4">
+                <div class="flex justify-between items-end">
+                  <label class="text-lg font-black text-gray-400 italic">Nível Final Alvo <span id="ui-label-water-liters" class="text-sm text-blue-400">(0.0L água)</span></label>
+                  <span class="text-4xl font-black text-blue-500"><span id="val-lvl-txt">90</span>%</span>
+                </div>
+                <input type="range" id="range-lvl" min="20" max="100" step="1" value="90" class="w-full">
+              </div>
+              <button onclick="confirmarReposicao()" class="flex h-20 w-full cursor-pointer items-center justify-center rounded-2xl bg-emerald-100 border-4 border-emerald-200 text-2xl font-black text-emerald-900 shadow-xl active:scale-95 transition">Confirmar Reposição</button>
+            </div>            <!-- Resultados em Tempo Real -->
+            <div class="w-1/2 flex flex-col gap-4">
+              <div class="bg-gray-800 rounded-[30px] p-8 text-white shadow-2xl border-l-8 border-blue-400">
+                <h3 class="text-blue-300 font-black text-sm mb-4 tracking-widest">Mistura Necessária</h3>
+                <div class="grid grid-cols-2 gap-6">
+                  <div class="border-r border-gray-700">
+                    <p class="text-gray-400 text-xs font-bold">Água a adicionar</p>
+                    <p class="text-5xl font-black text-white"><span id="res-agua-val">293.8</span><span class="text-lg text-blue-400 ml-1">L</span></p>
+                  </div>
+                  <div>
+                    <p class="text-gray-400 text-xs font-bold">Óleo a adicionar</p>
+                    <p class="text-5xl font-black text-yellow-400"><span id="res-oleo-val">21.2</span><span class="text-lg ml-1">L</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-[30px] p-6 shadow-xl italic font-bold text-gray-600 space-y-2">
+                <div class="flex justify-between py-1 border-b"><span>Volume Final:</span><span class="text-gray-900" id="info-vol-txt">450 L</span></div>
+                <div class="flex justify-between py-1 border-b"><span>Total Óleo Final:</span><span class="text-gray-900" id="info-oleo-txt">27.0 L</span></div>
+                <p class="text-[10px] text-gray-400 pt-2">Cálculos baseados na capacidade selecionada do tanque.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-[100px] flex justify-center items-start">
+            <label for="t-home" class="h-14 w-[250px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label>
+          </div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: MENU SECUNDÁRIO
+        ========================================== -->
+        <div id="v-menu" class="v">
+          <div class="flex h-[120px] items-center justify-center pt-8 font-black text-5xl tracking-[0.3em] text-gray-900 border-b-4 border-gray-800 mx-auto w-fit px-12">Menu</div>
+          <div class="flex flex-1 flex-col items-center justify-center gap-6 px-10">
+            <div class="flex gap-6">
+              <label for="t-intro" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-blue-500 text-xl font-black text-white shadow-md hover:bg-blue-600 transition active:scale-90">
+                Gestão de Tanques
+              </label>
+              <label for="t-st-ph" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] transition active:scale-90">
+                Histórico de pH
+              </label>
+              <label for="t-st-oil" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] transition active:scale-90">
+                Histórico de Concentração
+              </label>
+            </div>
+            <div class="flex gap-6">
+              <label for="t-st-lvl" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] transition active:scale-90">
+                Histórico de Nível
+              </label>
+              <label for="t-conf" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] transition active:scale-90">Configurações</label>
+              <label for="t-hist" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] transition active:scale-90">Histórico Semanal</label>
+            </div>
+            <div class="flex gap-6">
+              <label for="t-pred" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-[#a8e6b3] text-xl font-black text-green-950 shadow-md hover:bg-[#86d895] transition active:scale-90">Previsões</label>
+              <label for="t-tuto" class="flex h-[90px] w-[340px] cursor-pointer items-center justify-center rounded-2xl bg-blue-100 text-xl font-black text-blue-900 shadow-md hover:bg-blue-200 transition active:scale-90">Guia Prático / Tutorial</label>
+            </div>
+          </div>
+          <div class="flex h-[120px] items-start justify-center"><label for="t-home" class="flex h-16 w-[300px] cursor-pointer items-center justify-center rounded-xl bg-rose-100 border-4 border-rose-200 text-rose-900 text-2xl font-black shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: CONFIGURAÇÕES
+        ========================================== -->
+        <div id="v-conf" class="v">
+          <div class="h-[70px] flex items-center justify-center text-4xl font-black pt-2 tracking-tighter italic">Configurações</div>
+          <div class="flex flex-1 gap-10 px-12 pb-4 overflow-hidden">
+            <!-- Coluna Esquerda: E-mail -->
+            <div class="flex-1 flex flex-col justify-between h-full">
+              <div class="rounded-3xl bg-white p-5 shadow-xl border-t-8 border-gray-200">
+                <h3 class="font-black text-gray-800 border-b-2 pb-1 text-lg italic">Configurações de E-mail</h3>
+                <div class="space-y-1.5 mt-2 font-black text-gray-500">
+                  <div class="flex flex-col"><label class="text-sm">E-mail do Remetente:</label><input type="text" value="smartAdvanced@gmail.com" class="w-full rounded-lg border-2 bg-gray-50 p-2 text-black lowercase font-bold text-base mt-1" readonly></div>
+                  <div class="flex flex-col"><label class="text-sm">Senha do Aplicativo:</label><input type="password" value="********" class="w-full rounded-lg border-2 bg-gray-50 p-2 text-black font-bold text-base mt-1" readonly></div>
+                  <div class="flex flex-col"><label class="text-sm">E-mail do Destinatário:</label><input type="text" value="smartAdvanced@gmail.com" class="w-full rounded-lg border-2 bg-gray-50 p-2 text-black lowercase font-bold text-base mt-1" readonly></div>
+                  <div class="flex flex-col"><label class="text-sm">Assunto do E-mail:</label><input type="text" value="Relatório Diário - Emulsão Smart" class="w-full rounded-lg border-2 bg-gray-50 p-2 text-black font-bold text-base mt-1" readonly></div>
+                  <div class="flex flex-col"><label class="text-sm">Corpo do E-mail:</label><input type="text" value="Segue em anexo." class="w-full rounded-lg border-2 bg-gray-50 p-2 text-black font-bold text-base mt-1" readonly></div>
+                  <div class="pt-2 flex flex-col">
+                    <label class="text-sm">Horário do Agendamento (HH:MM):</label>
+                    <div class="w-full rounded-lg border-2 bg-white p-2 text-black font-black text-center text-xl tracking-widest mt-1">19:40</div>
+                  </div>
+                </div>
+              </div>
+              <div class="flex gap-4">
+                <button class="flex-1 rounded-2xl bg-[#a8e6b3] py-4 text-xl font-black text-green-950 shadow-md active:scale-95 transition">Guardar</button>
+                <button class="flex-1 rounded-2xl bg-[#a8e6b3] py-4 text-xl font-black text-green-950 shadow-md active:scale-95 transition">Enviar Relatório</button>
+              </div>
+            </div>
+
+            <!-- Coluna Direita: Sensores e Capacidade -->
+            <div class="w-[420px] flex flex-col justify-between h-full gap-4">
+              
+              <!-- Info de Capacidade do Tanque (Com botão para voltar ao intro) -->
+              <div class="rounded-3xl bg-white p-5 shadow-xl border-t-8 border-blue-400 space-y-3">
+                <div class="flex justify-between items-center border-b-2 pb-2">
+                  <h3 class="font-black text-gray-800 text-lg italic">Capacidade Selecionada</h3>
+                </div>
+                <div class="pt-1 flex items-center justify-between px-4">
+                   <span class="text-4xl font-black text-blue-500"><span id="val-cap-txt">500</span> L</span>
+                   <label for="t-intro" class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-600 border-2 border-slate-200 text-sm font-black px-4 py-2 rounded-xl shadow-sm transition active:scale-95 flex items-center gap-2">
+                     ↩ Alterar
+                   </label>
+                </div>
+              </div>
+
+              <!-- Valores dos Sensores -->
+              <div class="rounded-3xl bg-white p-5 shadow-xl border-t-8 border-green-400 space-y-4 flex-1 flex flex-col justify-center">
+                <h3 class="font-black text-gray-800 border-b-2 pb-1 text-lg italic">Valores dos Sensores</h3>
+                <div class="space-y-2 font-black text-gray-400">
+                  <div><label class="text-xs">pH (0 a 14):</label><div class="w-full rounded-xl border-2 p-2 text-center text-xl bg-white text-black">6.48</div></div>
+                  <div><label class="text-xs">Nível (%):</label><div class="w-full rounded-xl border-2 border-rose-400 p-2 text-center text-xl text-rose-500 bg-white">27.0</div></div>
+                  <div><label class="text-xs">Concentração de Óleo (%):</label><div class="w-full rounded-xl border-2 p-2 text-center text-xl bg-white text-black">5.44</div></div>
+                </div>
+              </div>
+
+              <label for="t-menu" class="w-full rounded-2xl bg-rose-100 border-4 border-rose-200 py-4 text-xl font-black text-rose-900 shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center">Sair</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: ESTATÍSTICAS pH
+        ========================================== -->
+        <div id="v-st-ph" class="v">
+          <div class="h-[100px] flex flex-col justify-center items-center pt-8 font-black"><h1 class="text-3xl text-gray-800">Histórico de pH</h1><p class="text-gray-400 text-xs">Leituras Recentes (Escala 0-14)</p></div>
+          <div class="flex-1 flex items-center justify-center">
+            <div class="chart-box">
+              <!-- Escala Y -->
+              <div class="absolute left-6 top-10 bottom-16 flex flex-col justify-between font-black text-gray-400 text-[12px] text-right w-10">
+                <span>14</span><span>10.5</span><span>7</span><span>3.5</span><span>0</span>
+              </div>
+              <div id="chart-ph-container" class="ml-16 h-full border-l-4 border-b-4 border-gray-200 relative">
+                 <svg id="svg-ph" class="h-full w-full" viewBox="0 0 880 300">
+                   <!-- Linhas de Grelha -->
+                   <line x1="0" y1="75" x2="880" y2="75" stroke="#f3f4f6" stroke-width="1" />
+                   <line x1="0" y1="150" x2="880" y2="150" stroke="#f3f4f6" stroke-width="1" />
+                   <line x1="0" y1="225" x2="880" y2="225" stroke="#f3f4f6" stroke-width="1" />
+                   <polyline id="poly-ph" points="" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+                   <g id="circles-ph"></g>
+                 </svg>
+                 <div id="labels-ph-time" class="absolute -bottom-10 left-0 w-full flex justify-between px-2 text-[10px] font-black text-gray-400 uppercase tracking-tighter"></div>
+              </div>
+            </div>
+          </div>
+          <div class="h-[120px] flex justify-center items-start"><label for="t-menu" class="h-16 w-[280px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: ESTATÍSTICAS ÓLEO
+        ========================================== -->
+        <div id="v-st-oil" class="v">
+          <div class="h-[100px] flex flex-col justify-center items-center pt-8 font-black"><h1 class="text-3xl text-gray-800">Concentração de Óleo (%)</h1><p class="text-gray-400 text-xs">Escala 0-10%</p></div>
+          <div class="flex-1 flex items-center justify-center">
+            <div class="chart-box">
+              <!-- Escala Y -->
+              <div class="absolute left-6 top-10 bottom-16 flex flex-col justify-between font-black text-gray-400 text-[12px] text-right w-10">
+                <span>10%</span><span>7.5%</span><span>5%</span><span>2.5%</span><span>0%</span>
+              </div>
+              <div id="chart-oil-container" class="ml-16 h-full border-l-4 border-b-4 border-gray-200 relative">
+                 <svg id="svg-oil" class="h-full w-full" viewBox="0 0 880 300">
+                   <line x1="0" y1="75" x2="880" y2="75" stroke="#f3f4f6" stroke-width="1" />
+                   <line x1="0" y1="150" x2="880" y2="150" stroke="#f3f4f6" stroke-width="1" />
+                   <line x1="0" y1="225" x2="880" y2="225" stroke="#f3f4f6" stroke-width="1" />
+                   <polyline id="poly-oil" points="" fill="none" stroke="#60a5fa" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+                   <g id="circles-oil"></g>
+                 </svg>
+                 <div id="labels-oil-time" class="absolute -bottom-10 left-0 w-full flex justify-between px-2 text-[10px] font-black text-gray-400 uppercase tracking-tighter"></div>
+              </div>
+            </div>
+          </div>
+          <div class="h-[120px] flex justify-center items-start"><label for="t-menu" class="h-16 w-[280px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: ESTATÍSTICAS NÍVEL
+        ========================================== -->
+        <div id="v-st-lvl" class="v">
+          <div class="h-[100px] flex flex-col justify-center items-center pt-8 font-black"><h1 class="text-3xl text-gray-800">Nível do Líquido (%)</h1><p class="text-gray-400 text-xs">Escala 0-100%</p></div>
+          <div class="flex-1 flex items-center justify-center">
+            <div class="chart-box">
+              <!-- Escala Y -->
+              <div class="absolute left-6 top-10 bottom-16 flex flex-col justify-between font-black text-gray-400 text-[12px] text-right w-10">
+                <span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span>
+              </div>
+              <div id="chart-lvl-container" class="ml-16 h-full border-l-4 border-b-4 border-gray-200 relative">
+                 <svg id="svg-lvl" class="h-full w-full" viewBox="0 0 880 300">
+                   <line x1="0" y1="75" x2="880" y2="75" stroke="#f3f4f6" stroke-width="1" />
+                   <line x1="0" y1="150" x2="880" y2="150" stroke="#f3f4f6" stroke-width="1" />
+                   <line x1="0" y1="225" x2="880" y2="225" stroke="#f3f4f6" stroke-width="1" />
+                   <polyline id="poly-lvl" points="" fill="none" stroke="#10b981" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" />
+                   <g id="circles-lvl"></g>
+                 </svg>
+                 <div id="labels-lvl-time" class="absolute -bottom-10 left-0 w-full flex justify-between px-2 text-[10px] font-black text-gray-400 uppercase tracking-tighter"></div>
+              </div>
+            </div>
+          </div>
+          <div class="h-[120px] flex justify-center items-start"><label for="t-menu" class="h-16 w-[280px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: VISUALIZAÇÃO DO TANQUE
+        ========================================== -->
+        <div id="v-tanque" class="v">
+          <div class="h-[100px] pt-8 text-center text-4xl font-black text-gray-900 tracking-tighter">Estado do Tanque</div>
+          <div class="flex flex-1 items-center justify-center gap-16 px-10">
+            <div class="relative h-[440px] w-[300px] rounded-b-[40px] border-8 border-gray-800 bg-white shadow-2xl overflow-hidden flex flex-col justify-end">
+               <!-- Barra de Nível Animada -->
+               <div id="ui-tank-bar" class="w-full bg-blue-400/80 transition-all duration-1000 relative" style="height: 27%;">
+                 <div class="absolute top-0 left-0 w-full h-1 bg-blue-300"></div>
+               </div>
+               <div id="ui-tank-percent-inner" class="absolute inset-0 flex items-center justify-center font-black text-gray-800 text-4xl opacity-10 tracking-tighter">27%</div>
+            </div>
+            <div class="w-[500px] space-y-6 rounded-[40px] bg-white p-10 shadow-xl border-2 border-white/50 font-black italic">
+              <div class="flex justify-between items-center py-2">
+                <span class="text-2xl text-gray-400 italic">Nível Atual:</span>
+                <span id="ui-tank-level-txt" class="text-5xl text-blue-500">27.0%</span>
+              </div>
+              <div class="flex justify-between border-t pt-4 text-gray-400">
+                <span>pH Atual:</span>
+                <span id="ui-tank-ph-txt" class="text-gray-800">6.49</span>
+              </div>
+              <div class="flex justify-between text-gray-400">
+                <span>Concentração:</span>
+                <span id="ui-tank-oil-txt" class="text-gray-800">5.44%</span>
+              </div>
+              <div id="ui-critical-warn" class="mt-4 p-4 bg-rose-50 text-rose-500 rounded-xl text-center border-2 border-rose-100 text-xs hidden">
+                Atenção: Nível crítico detetado
+              </div>
+            </div>
+          </div>
+          <div class="h-[140px] flex justify-center items-start"><label for="t-home" class="h-16 w-[300px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: HISTÓRICO
+        ========================================== -->
+        <div id="v-hist" class="v">
+          <div class="h-[100px] flex flex-col items-center justify-center pt-6 font-black tracking-tighter"><h1 class="text-3xl text-gray-900 italic">Histórico Semanal</h1></div>
+          <div class="flex-1 px-16 pt-6">
+            <table class="w-full text-center rounded-3xl overflow-hidden shadow-2xl bg-white border-4 border-white italic font-black">
+              <thead class="bg-gray-800 text-white text-lg"><tr><th class="p-5">Dia</th><th class="p-5">pH Máx</th><th class="p-5">Nível Médio</th><th class="p-5">Óleo Máx</th></tr></thead>
+              <tbody class="text-2xl text-gray-600">
+                <tr class="border-b"><td class="p-5">12/05/2026</td><td class="p-5">11.01</td><td class="p-5 text-blue-400">27.0%</td><td class="p-5">5.44%</td></tr>
+                <tr class="bg-gray-50 border-b"><td class="p-5">11/05/2026</td><td class="p-5">9.20</td><td class="p-5 text-blue-400">45.0%</td><td class="p-5">5.80%</td></tr>
+              </tbody>
+            </table>
+            <div class="mt-8 flex justify-center gap-6 font-black">
+              <button class="h-14 px-10 rounded-2xl bg-white text-gray-400 border-b-4 border-gray-200 active:scale-95 transition">⬅ Semana Anterior</button>
+              <button class="h-14 px-10 rounded-2xl bg-white text-gray-400 border-b-4 border-gray-200 active:scale-95 transition">Próxima Semana ➡</button>
+            </div>
+          </div>
+          <div class="h-[120px] flex justify-center items-start"><label for="t-menu" class="h-16 w-[280px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: PREVISÃO
+        ========================================== -->
+        <div id="v-pred" class="v">
+           <div class="h-[100px] flex items-center justify-center text-3xl font-black pt-6 tracking-[0.2em] text-gray-800 italic">Previsão de Parâmetros</div>
+           <div class="flex-1 px-40 py-10">
+             <div class="bg-white rounded-3xl h-full shadow-2xl overflow-hidden border-4 border-white italic">
+               <table class="w-full text-center">
+                 <thead class="bg-blue-400 text-white font-black text-xl italic"><tr><th class="p-4">Hora Estimada</th><th class="p-4">Nível Previsto</th><th class="p-4">Óleo Previsto</th></tr></thead>
+                 <tbody class="text-2xl font-black text-gray-600 italic">
+                   <tr class="border-b"><td class="p-4">13:00</td><td class="p-4 text-blue-400">24%</td><td class="p-4">5.40%</td></tr>
+                   <tr class="border-b bg-gray-50"><td class="p-4">14:00</td><td class="p-4 text-blue-400">21%</td><td class="p-4">5.38%</td></tr>
+                   <tr class="border-b"><td class="p-4">15:00</td><td class="p-4 text-blue-400">18%</td><td class="p-4 text-rose-400">5.35%</td></tr>
+                 </tbody>
+               </table>
+             </div>
+           </div>
+           <div class="h-[120px] flex justify-center items-start"><label for="t-menu" class="h-16 w-[280px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+        <!-- ========================================== 
+             ECRÃ: TUTORIAL (REESCRITO E OPTIMIZADO)
+        ========================================== -->
+        <div id="v-tuto" class="v">
+           <div class="h-[90px] flex items-center justify-center text-3xl font-black pt-6 tracking-wide text-gray-900 border-b-2 mx-auto px-10 italic">Guia Rápido de Operação</div>
+           <div class="flex-1 px-14 py-6 overflow-hidden">
+             <div class="grid grid-cols-2 gap-6 h-full font-bold">
+               
+               <!-- Card 1: Sensor Ultrassónico -->
+               <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-blue-400 flex flex-col justify-between">
+                 <div>
+                   <h3 class="text-blue-500 font-black text-lg mb-2">1. Monitorização do Nível</h3>
+                   <p class="text-gray-600 text-sm leading-relaxed">O sensor ultrassónico faz leituras em tempo real. Se o nível do tanque descer abaixo dos 30%, o sistema entra em estado crítico. Faça a reposição imediata para proteger as bombas.</p>
+                 </div>
+                 <span class="text-xs text-gray-400 bg-gray-50 p-2 rounded-lg italic">Evita paragens por cavitação técnica.</span>
+               </div>
+
+               <!-- Card 2: Controlo Química e pH -->
+               <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-amber-500 flex flex-col justify-between">
+                 <div>
+                   <h3 class="text-amber-600 font-black text-lg mb-2">2. Parâmetros de Óleo e pH</h3>
+                   <p class="text-gray-600 text-sm leading-relaxed">Verifique regularmente os gráficos de tendência. Valores de pH fora do intervalo de segurança ou picos acima de 9.5 exigem uma intervenção química e retificação corretiva.</p>
+                 </div>
+                 <span class="text-xs text-gray-400 bg-gray-50 p-2 rounded-lg italic">Garante a qualidade ideal da emulsão.</span>
+               </div>
+
+               <!-- Card 3: Assistente de Reposição -->
+               <div class="bg-white rounded-2xl p-6 shadow-md border-t-4 border-green-500 flex flex-col justify-between col-span-2">
+                 <div>
+                   <h3 class="text-green-600 font-black text-lg mb-2">3. Como Efetuar a Reposição Automática</h3>
+                   <p class="text-gray-600 text-sm leading-relaxed">Aceda ao ecrã "Repor Líquido", defina a concentração de óleo alvo e o nível final desejado através dos seletores dinâmicos. O algoritmo integrado calcula instantaneamente as porções exatas de água e óleo puro a introduzir.</p>
+                 </div>
+                 <span class="text-xs text-gray-400 bg-gray-50 p-2 rounded-lg italic">Nota: Confirme sempre os valores antes de validar a mistura no painel.</span>
+               </div>
+
+             </div>
+           </div>
+           <div class="h-[100px] flex justify-center items-start"><label for="t-menu" class="h-16 w-[280px] bg-rose-100 border-4 border-rose-200 text-rose-900 font-black flex items-center justify-center rounded-xl cursor-pointer shadow-lg active:scale-95 transition">Voltar</label></div>
+        </div>
+
+      </div>
+    </div>
+
+    <script>
+      // Lista de Tanques (Estado da Aplicação)
+      let tanks = [
+        { id: Date.now(), name: "Tanque Principal", capacity: 500 }
+      ];
+      
+      let currentTankId = tanks[0].id;
+      let globalCapacity = tanks[0].capacity;
+      let globalTankName = tanks[0].name;
+
+      // Seleção de elementos
+      const tankListContainer = document.getElementById('tank-list');
+      const txtCap = document.getElementById('val-cap-txt');
+      const homeVolAtual = document.getElementById('home-vol-atual');
+      const homeVolTotal = document.getElementById('home-vol-total');
+      const homeTankTitle = document.getElementById('home-tank-title');
+
+      const rangeOil = document.getElementById('range-oil');
+      const rangeLvl = document.getElementById('range-lvl');
+      const txtOil = document.getElementById('val-oil-txt');
+      const txtLvl = document.getElementById('val-lvl-txt');
+      
+      const resAguaVal = document.getElementById('res-agua-val');
+      const resOleoVal = document.getElementById('res-oleo-val');
+      const infoVolTxt = document.getElementById('info-vol-txt');
+      const infoOleoTxt = document.getElementById('info-oleo-txt');
+
+      // Elementos do Modal de Tanque
+      const tankModalTitle = document.getElementById('tank-modal-title');
+      const inputTankId = document.getElementById('input-tank-id');
+      const inputTankName = document.getElementById('input-tank-name');
+      const inputTankCap = document.getElementById('input-tank-cap');
+      const btnSaveTank = document.getElementById('btn-save-tank');
+      const btnDeleteTank = document.getElementById('btn-delete-tank');
+
+      // Função para renderizar a lista de tanques no ecrã Intro
+      function renderTanks() {
+        tankListContainer.innerHTML = '';
+        
+        tanks.forEach(tank => {
+          const card = document.createElement('div');
+          card.className = "relative group";
+          card.innerHTML = `
+            <div onclick="selectTank(${tank.id})" class="flex flex-col items-center justify-center h-64 w-64 rounded-[40px] bg-blue-50 border-8 border-blue-200 cursor-pointer shadow-xl hover:bg-blue-100 hover:-translate-y-2 transition-all duration-300 active:scale-95 group overflow-hidden">
+              <span class="text-xl font-bold text-gray-500 mb-2">${tank.name}</span>
+              <span class="text-6xl font-black text-blue-500 group-hover:text-blue-600 transition-colors">${tank.capacity}</span>
+              <span class="text-2xl font-bold text-blue-400 mt-2">Litros</span>
+            </div>
+            <button onclick="event.stopPropagation(); openTankModal(${tank.id})" class="absolute -top-2 -right-2 h-14 w-14 bg-white border-4 border-blue-200 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-90 transition">
+              <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          `;
+          tankListContainer.appendChild(card);
+        });
+      }
+
+      // Abre o modal para criar ou editar um tanque
+      function openTankModal(id = null) {
+        if (id) {
+          const tank = tanks.find(t => t.id === id);
+          tankModalTitle.textContent = "Editar Tanque";
+          inputTankId.value = tank.id;
+          inputTankName.value = tank.name;
+          inputTankCap.value = tank.capacity;
+          btnSaveTank.textContent = "Guardar Alterações";
+          btnDeleteTank.classList.remove('hidden');
+        } else {
+          tankModalTitle.textContent = "Novo Tanque";
+          inputTankId.value = "";
+          inputTankName.value = "";
+          inputTankCap.value = "";
+          btnSaveTank.textContent = "Adicionar";
+          btnDeleteTank.classList.add('hidden');
+        }
+        document.getElementById('t-criar').checked = true;
+      }
+
+      // Função para salvar (criar ou editar)
+      function salvarTanque() {
+        const id = inputTankId.value;
+        const name = inputTankName.value.trim() === "" ? "Tanque Personalizado" : inputTankName.value;
+        const cap = parseFloat(inputTankCap.value);
+
+        if (isNaN(cap) || cap <= 0) {
+          alert("Por favor, introduza uma capacidade válida.");
+          return;
+        }
+
+        if (id) {
+          // Editar
+          const index = tanks.findIndex(t => t.id == id);
+          tanks[index].name = name;
+          tanks[index].capacity = cap;
+          
+          // Se for o tanque atual, atualizar variáveis globais
+          if (id == currentTankId) {
+            globalCapacity = cap;
+            globalTankName = name;
+            if(homeTankTitle) homeTankTitle.textContent = globalTankName;
+            atualizarCalculos();
+          }
+        } else {
+          // Criar novo
+          const newTank = { id: Date.now(), name: name, capacity: cap };
+          tanks.push(newTank);
+        }
+
+        renderTanks();
+        document.getElementById('t-intro').checked = true;
+      }
+
+      function removeTankFromEdit() {
+        const id = inputTankId.value;
+        if (!id) return;
+        
+        if (tanks.length <= 1) {
+          alert("Não podes remover o último tanque!");
+          return;
+        }
+
+        if (confirm("Tens a certeza que queres eliminar este tanque?")) {
+          tanks = tanks.filter(t => t.id != id);
+          renderTanks();
+          document.getElementById('t-intro').checked = true;
+        }
+      }
+
+      // Função para selecionar um tanque e ir para a Home
+      async function selectTank(id) {
+        const tank = tanks.find(t => t.id === id);
+        if (!tank) return;
+        
+        currentTankId = tank.id;
+        globalCapacity = tank.capacity;
+        globalTankName = tank.name;
+        
+        if(homeTankTitle) homeTankTitle.textContent = globalTankName;
+        
+        // Sincronizar com o backend para as gravações na BD ficarem corretas
+        try {
+          await fetch('/api/sync_tank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: globalTankName, capacity: globalCapacity })
+          });
+        } catch (e) { console.error("Erro ao sincronizar tanque:", e); }
+
+        atualizarCalculos();
+        document.getElementById('t-home').checked = true;
+      }
+
+      // Função para atualizar os cálculos da UI localmente
+      function atualizarCalculos() {
+        const capacidadeTotal = globalCapacity;
+        // Estes valores agora serão atualizados pelo fetchSensors()
+        // Mas mantemos a lógica para os cálculos de reposição
+        
+        const resAgua = parseFloat(resAguaVal.textContent);
+        const resOleo = parseFloat(resOleoVal.textContent);
+
+        txtOil.textContent = rangeOil.value;
+        txtLvl.textContent = rangeLvl.value;
+        
+        // Recalcular apenas o que falta adicionar com base na UI
+        const novoNivelPercent = parseFloat(rangeLvl.value) / 100;
+        const volumeFinalDesejado = capacidadeTotal * novoNivelPercent;
+        const novaConcentracao = parseFloat(rangeOil.value) / 100;
+        const oleoTotalDesejado = volumeFinalDesejado * novaConcentracao;
+
+        // Nota: O cálculo exato aqui depende do valor atual dos sensores.
+        // Vamos deixar o Python fazer a conta final no /api/fill, 
+        // mas atualizamos a UI para dar feedback ao utilizador.
+        
+        // Aqui simulamos a mesma conta que o Python faria para mostrar na UI
+        // Usamos os valores "atuais" que estão no ecrã
+        const nivelAtualL = (parseFloat(document.getElementById('ui-level-percent').textContent) / 100) * capacidadeTotal;
+        const concentracaoAtual = parseFloat(document.getElementById('ui-oil').textContent) / 100;
+        const oleoAtualL = nivelAtualL * concentracaoAtual;
+
+        const oleoAdd = Math.max(0, oleoTotalDesejado - oleoAtualL);
+        const volTotalAdd = volumeFinalDesejado - nivelAtualL;
+        const aguaAdd = Math.max(0, volTotalAdd - oleoAdd);
+
+        // Atualizar labels com litros em parenteses
+        document.getElementById('ui-label-oil-liters').textContent = `(${oleoAdd.toFixed(1)}L óleo)`;
+        document.getElementById('ui-label-water-liters').textContent = `(${aguaAdd.toFixed(1)}L água)`;
+
+        resAguaVal.textContent = aguaAdd.toFixed(1);
+        resOleoVal.textContent = oleoAdd.toFixed(1);
+        infoVolTxt.textContent = volumeFinalDesejado.toFixed(0) + " L";
+        infoOleoTxt.textContent = oleoTotalDesejado.toFixed(1) + " L";
+      }
+
+      // --- INTEGRAÇÃO COM BACKEND (FastAPI) ---
+
+      // Função para ler dados dos sensores do Python
+      async function fetchSensors() {
+        try {
+          const response = await fetch('/api/sensors');
+          const data = await response.json();
+          
+          // --- ATUALIZAÇÃO ECRÃ HOME ---
+          if (document.getElementById('ui-ph')) document.getElementById('ui-ph').textContent = data.ph.toFixed(2);
+          if (document.getElementById('ui-oil')) document.getElementById('ui-oil').textContent = data.oil.toFixed(1) + '%';
+          if (document.getElementById('ui-level-percent')) document.getElementById('ui-level-percent').textContent = data.level_percent.toFixed(0) + '%';
+          
+          const volAtual = (data.level_percent / 100) * globalCapacity;
+          if (document.getElementById('home-vol-atual')) document.getElementById('home-vol-atual').textContent = volAtual.toFixed(0);
+          if (document.getElementById('home-vol-total')) document.getElementById('home-vol-total').textContent = globalCapacity;
+
+          // --- ATUALIZAÇÃO ECRÃ VISUALIZAR TANQUE ---
+          const tankBar = document.getElementById('ui-tank-bar');
+          if (tankBar) tankBar.style.height = data.level_percent + '%';
+          
+          const tankPercentInner = document.getElementById('ui-tank-percent-inner');
+          if (tankPercentInner) tankPercentInner.textContent = data.level_percent.toFixed(0) + '%';
+          
+          const tankLevelTxt = document.getElementById('ui-tank-level-txt');
+          if (tankLevelTxt) tankLevelTxt.textContent = data.level_percent.toFixed(1) + '%';
+          
+          const tankPhTxt = document.getElementById('ui-tank-ph-txt');
+          if (tankPhTxt) tankPhTxt.textContent = data.ph.toFixed(2);
+          
+          const tankOilTxt = document.getElementById('ui-tank-oil-txt');
+          if (tankOilTxt) tankOilTxt.textContent = data.oil.toFixed(2) + '%';
+
+          // Alerta Crítico
+          const criticalWarn = document.getElementById('ui-critical-warn');
+          if (criticalWarn) {
+            if (data.level_percent < 30) {
+              criticalWarn.classList.remove('hidden');
+            } else {
+              criticalWarn.classList.add('hidden');
+            }
+          }
+
+          // Feedback visual de atuadores
+          const statusText = document.querySelector('#home-tank-title + p');
+          if (statusText) {
+            if (data.valve_open || data.pump_running) {
+              statusText.textContent = "⚙️ Atuadores Ligados...";
+              statusText.className = "text-xs font-bold text-orange-500 animate-pulse";
+            } else {
+              statusText.textContent = "Sensores Funcionais";
+              statusText.className = "text-xs font-bold opacity-90 text-black";
+            }
+          }
+
+        } catch (error) {
+          console.error("Erro ao ler sensores:", error);
+        }
+      }
+
+      // Função para enviar ordem de enchimento para o hardware
+      async function confirmarReposicao() {
+        const targetLvl = parseFloat(rangeLvl.value);
+        const targetOil = parseFloat(rangeOil.value);
+        const oilToAdd = parseFloat(resOleoVal.textContent);
+        const waterToAdd = parseFloat(resAguaVal.textContent);
+
+        const payload = {
+          tank_id: currentTankId,
+          target_level_percent: targetLvl,
+          target_oil_percent: targetOil,
+          oil_to_add: oilToAdd,
+          water_to_add: waterToAdd
+        };
+
+        try {
+          const response = await fetch('/api/fill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.ok) {
+            alert("Ordem enviada! O Raspberry Pi iniciou o enchimento.");
+            document.getElementById('t-home').checked = true; // Volta para a home para ver o progresso
+          } else {
+            alert("Erro ao comunicar com o hardware.");
+          }
+        } catch (error) {
+          console.error("Erro na reposição:", error);
+        }
+      }
+
+      // Escutar mudanças
+      rangeOil.addEventListener('input', atualizarCalculos);
+      rangeLvl.addEventListener('input', atualizarCalculos);
+
+      // Vincular botão de novo tanque
+      document.querySelector('label[for="t-criar"]').onclick = (e) => {
+        e.preventDefault();
+        openTankModal();
+      };
+
+      // Iniciar a aplicação
+      renderTanks();
+      
+      // --- SISTEMA DE GRÁFICOS E HISTÓRICO ---
+
+      async function updateCharts() {
+        try {
+          const response = await fetch(`/api/sensors/history?tank_name=${encodeURIComponent(globalTankName)}`);
+          const history = await response.json();
+          
+          if (!history || history.length === 0) {
+            console.log("Aguardando dados para os gráficos...");
+            return;
+          }
+
+          console.log(`Renderizando gráficos com ${history.length} pontos.`);
+
+          // Função para mapear valores para coordenadas SVG (0-880 x, 0-300 y)
+          const mapY = (val, min, max) => 300 - ((val - min) / (max - min)) * 300;
+          const stepX = history.length > 1 ? 880 / (history.length - 1) : 0;
+
+          // 1. Gráfico pH (escala 0-14)
+          const pointsPh = history.map((d, i) => `${i * stepX},${mapY(d.ph, 0, 14)}`).join(' ');
+          const polyPh = document.getElementById('poly-ph');
+          if (polyPh) polyPh.setAttribute('points', pointsPh);
+          renderCircles('circles-ph', history, stepX, (d) => mapY(d.ph, 0, 14), '#f59e0b');
+
+          // 2. Gráfico Óleo (escala 0-10%)
+          const pointsOil = history.map((d, i) => `${i * stepX},${mapY(d.oil_concentration, 0, 10)}`).join(' ');
+          const polyOil = document.getElementById('poly-oil');
+          if (polyOil) polyOil.setAttribute('points', pointsOil);
+          renderCircles('circles-oil', history, stepX, (d) => mapY(d.oil_concentration, 0, 10), '#60a5fa');
+
+          // 3. Gráfico Nível (escala 0-100%)
+          const pointsLvl = history.map((d, i) => `${i * stepX},${mapY(d.level, 0, 100)}`).join(' ');
+          const polyLvl = document.getElementById('poly-lvl');
+          if (polyLvl) polyLvl.setAttribute('points', pointsLvl);
+          renderCircles('circles-lvl', history, stepX, (d) => mapY(d.level, 0, 100), '#10b981');
+
+          // Atualizar labels de tempo
+          const updateLabels = (id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            // Mostrar até 6 labels de tempo
+            const count = Math.min(history.length, 6);
+            const step = Math.max(1, Math.floor(history.length / (count - 1 || 1)));
+            const filtered = [];
+            for(let i=0; i<history.length; i+=step) filtered.push(history[i]);
+            if (filtered[filtered.length-1] !== history[history.length-1]) filtered.push(history[history.length-1]);
+
+            el.innerHTML = filtered.slice(0, 6).map(d => `<span>${d.timestamp.split(' ')[1] || d.timestamp}</span>`).join('');
+          };
+          
+          updateLabels('labels-ph-time');
+          updateLabels('labels-oil-time');
+          updateLabels('labels-lvl-time');
+
+        } catch (error) {
+          console.error("Erro nos gráficos:", error);
+        }
+      }
+
+      function renderCircles(groupId, data, stepX, yFunc, color) {
+        const group = document.getElementById(groupId);
+        if (!group) return;
+        group.innerHTML = data.map((d, i) => `
+          <circle cx="${i * stepX}" cy="${yFunc(d)}" r="5" fill="white" stroke="${color}" stroke-width="3" />
+        `).join('');
+      }
+
+      async function updateWeeklyTable() {
+        try {
+          const response = await fetch(`/api/sensors/weekly?tank_name=${encodeURIComponent(globalTankName)}`);
+          const summary = await response.json();
+          
+          const tbody = document.querySelector('#v-hist tbody');
+          if (!tbody) return;
+          
+          tbody.innerHTML = summary.map((day, i) => `
+            <tr class="${i % 2 === 0 ? '' : 'bg-gray-50'} border-b">
+              <td class="p-5">${new Date(day.date).toLocaleDateString('pt-PT')}</td>
+              <td class="p-5">${day.max_ph.toFixed(2)}</td>
+              <td class="p-5 text-blue-400">${day.avg_level.toFixed(1)}%</td>
+              <td class="p-5">${day.max_oil.toFixed(2)}%</td>
+            </tr>
+          `).join('');
+        } catch (error) {
+          console.error("Erro na tabela semanal:", error);
+        }
+      }
+
+      // Vincular eventos de navegação para atualizar dados específicos
+      document.querySelectorAll('input[name="n"]').forEach(input => {
+        input.addEventListener('change', () => {
+          if (document.getElementById('t-st-ph').checked || 
+              document.getElementById('t-st-oil').checked || 
+              document.getElementById('t-st-lvl').checked) {
+            updateCharts();
+          }
+          if (document.getElementById('t-hist').checked) {
+            updateWeeklyTable();
+          }
+        });
+      });
+
+      // Polling: Atualiza a cada 2 segundos
+      setInterval(fetchSensors, 2000);
+      setInterval(() => {
+        // Atualiza gráficos em background se estivermos num ecrã de estatísticas
+        if (['t-st-ph', 't-st-oil', 't-st-lvl'].some(id => document.getElementById(id).checked)) {
+          updateCharts();
+        }
+      }, 5000);
+
+      fetchSensors(); // Primeira leitura imediata
+    </script>
+</body>
+</html>
